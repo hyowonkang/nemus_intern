@@ -21,6 +21,11 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public class MainActivity extends AppCompatActivity {
 
@@ -90,16 +95,22 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
 
-            int min = 0;
-            int rssi = result.getRssi();
 
-            peripheralTextView.append("Device Name: " + result.getDevice().getName() + "\n rssi: " + result.getRssi() + "\n Adress: "+ result.getDevice().getAddress()+"\n\n");
+            BeaconRecord beacon = new BeaconRecord(result.getScanRecord().getBytes());
+            Set<String> set = new HashSet<String>();
+            set.add(result.getDevice().getAddress());
+            List<Integer> list = new ArrayList<Integer>();
 
-            // auto scroll for text view
-            final int scrollAmount = peripheralTextView.getLayout().getLineTop(peripheralTextView.getLineCount()) - peripheralTextView.getHeight();
-            // if there is no need to scroll, scrollAmount will be <=0
-            if (scrollAmount > 0)
-                peripheralTextView.scrollTo(0, scrollAmount);
+
+
+
+                peripheralTextView.append("Device Name: " + result.getDevice().getName() + "\n rssi: " + result.getRssi() + "\n Adress: " + set + "\n UUID: " + beacon.getUuid() + "\n Major: " + beacon.getMajor() + "\n Minor: " + beacon.getMinor() + "\n\n");
+                final int scrollAmount = peripheralTextView.getLayout().getLineTop(peripheralTextView.getLineCount()) - peripheralTextView.getHeight();
+                if (scrollAmount > 0)
+                    peripheralTextView.scrollTo(0, scrollAmount);
+
+
+
         }
     };
 //
@@ -154,4 +165,58 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+    class BeaconRecord{
+        private String uuid;
+        private int minor;
+        private int major;
+
+        public BeaconRecord(byte[] scanRecord) {
+            int startByte = 2;
+            boolean patternFound = false;
+            while (startByte <= 5) {
+                if (((int) scanRecord[startByte + 2] & 0xff) == 0x02 && //Identifies an iBeacon
+                        ((int) scanRecord[startByte + 3] & 0xff) == 0x15) { //Identifies correct data length
+                    patternFound = true;
+                    break;
+                }
+                startByte++;
+            }
+
+            if (patternFound) {
+                //Convert to hex String
+                byte[] uuidBytes = new byte[16];
+                System.arraycopy(scanRecord, startByte + 4, uuidBytes, 0, 16);
+                String hexString = bytesToHex(uuidBytes);
+
+                //Here is your UUID
+                uuid = hexString.substring(0, 8) + "-" +
+                        hexString.substring(8, 12) + "-" +
+                        hexString.substring(12, 16) + "-" +
+                        hexString.substring(16, 20) + "-" +
+                        hexString.substring(20, 32);
+
+                //Here is your Major value
+                major = (scanRecord[startByte + 20] & 0xff) * 0x100 + (scanRecord[startByte + 21] & 0xff);
+
+                //Here is your Minor value
+                minor = (scanRecord[startByte + 22] & 0xff) * 0x100 + (scanRecord[startByte + 23] & 0xff);
+            }
+        }
+        public String getUuid(){return uuid;}
+        public int getMinor(){return minor;}
+        public int getMajor(){return major;}
+    }
+
+    static final char[] hexArray = "0123456789ABCDEF".toCharArray();
+    private static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for ( int j = 0; j < bytes.length; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new String(hexChars);
+    }
 }
+

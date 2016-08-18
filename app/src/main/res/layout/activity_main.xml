@@ -35,6 +35,6 @@
         android:id="@+id/PeripheralTextView"
         android:scrollbars="vertical"
         android:maxLines="30"
-        android:textSize="15dp" />
+        android:textSize="13dp" />
 
 </RelativeLayout>

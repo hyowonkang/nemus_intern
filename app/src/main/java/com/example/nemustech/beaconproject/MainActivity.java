@@ -22,12 +22,11 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.Collections;
+import java.util.Comparator;
 
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements Comparator<MainActivity.BeaconRecord>{
 
     BluetoothManager btManager;
     BluetoothAdapter btAdapter;
@@ -93,27 +92,26 @@ public class MainActivity extends AppCompatActivity {
     private ScanCallback leScanCallback = new ScanCallback() {
 
         @Override
-        public void onScanResult(int callbackType, ScanResult result) {
-
+        public void onScanResult(int callbackType, final ScanResult result) {
 
             BeaconRecord beacon = new BeaconRecord(result.getScanRecord().getBytes());
-            Set<String> set = new HashSet<String>();
-            set.add(result.getDevice().getAddress());
-            List<Integer> list = new ArrayList<Integer>();
-
-
-
-
-                peripheralTextView.append("Device Name: " + result.getDevice().getName() + "\n rssi: " + result.getRssi() + "\n Adress: " + set + "\n UUID: " + beacon.getUuid() + "\n Major: " + beacon.getMajor() + "\n Minor: " + beacon.getMinor() + "\n\n");
+            ArrayList arr = new ArrayList();
+            arr.add(beacon);
+            Collections.sort(arr, new Comparator<BeaconRecord>() {
+                @Override
+                public int compare(BeaconRecord beaconRecord, BeaconRecord t1) {
+                    return beaconRecord.getRssi() < t1.getRssi() ? -1 : beaconRecord.getRssi() > t1.getRssi() ? 1:0;
+                }
+            });
+                peripheralTextView.append("Device Name: " + result.getDevice().getName()+ "\n rssi: " + result.getRssi() + "\n Adress: " + result.getDevice().getAddress() + "\n UUID: " + result.getDevice().getUuids() + "\n Major: " + beacon.getMajor() + "\n Minor: " + beacon.getMinor() + "\n\n");
                 final int scrollAmount = peripheralTextView.getLayout().getLineTop(peripheralTextView.getLineCount()) - peripheralTextView.getHeight();
                 if (scrollAmount > 0)
                     peripheralTextView.scrollTo(0, scrollAmount);
 
 
-
         }
     };
-//
+
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String permissions[], int[] grantResults) {
@@ -166,10 +164,22 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    public int compare(BeaconRecord beaconRecord, BeaconRecord t1) {
+        return beaconRecord.getRssi() < t1.getRssi() ? -1 : beaconRecord.getRssi() > t1.getRssi() ? 1:0;
+    }
+
     class BeaconRecord{
         private String uuid;
         private int minor;
         private int major;
+        private int rssi;
+        private String name;
+        private String address;
+        private int temper;
+        private int light;
+
+
 
         public BeaconRecord(byte[] scanRecord) {
             int startByte = 2;
@@ -186,8 +196,10 @@ public class MainActivity extends AppCompatActivity {
             if (patternFound) {
                 //Convert to hex String
                 byte[] uuidBytes = new byte[16];
+                byte[] serviceBytes = new byte[32];
                 System.arraycopy(scanRecord, startByte + 4, uuidBytes, 0, 16);
                 String hexString = bytesToHex(uuidBytes);
+
 
                 //Here is your UUID
                 uuid = hexString.substring(0, 8) + "-" +
@@ -201,15 +213,22 @@ public class MainActivity extends AppCompatActivity {
 
                 //Here is your Minor value
                 minor = (scanRecord[startByte + 22] & 0xff) * 0x100 + (scanRecord[startByte + 23] & 0xff);
+                
             }
         }
+
         public String getUuid(){return uuid;}
         public int getMinor(){return minor;}
         public int getMajor(){return major;}
+        public int getRssi() {return rssi;}
+
+
+
     }
 
-    static final char[] hexArray = "0123456789ABCDEF".toCharArray();
-    private static String bytesToHex(byte[] bytes) {
+
+        static final char[] hexArray = "0123456789ABCDEF".toCharArray();
+        private static String bytesToHex(byte[] bytes) {
         char[] hexChars = new char[bytes.length * 2];
         for ( int j = 0; j < bytes.length; j++ ) {
             int v = bytes[j] & 0xFF;

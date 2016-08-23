@@ -17,7 +17,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.method.ScrollingMovementMethod;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -71,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableIntent,REQUEST_ENABLE_BT);
         }
-//
+
         // Make sure we have access coarse location enabled, if not, prompt the user to enable it
         if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             final AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -89,22 +88,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    // Device scan callback.
     private ScanCallback leScanCallback = new ScanCallback() {
 
         @Override
         public void onScanResult(int callbackType, final ScanResult result) {
 
             BeaconRecord beacon = new BeaconRecord(result);
-
+            //if light of beacons is 0, it isn't display on device.
+            if (beacon.light != 0 ) {
                 peripheralTextView.append("Device Name: " + result.getDevice().getName() + "\nrssi: " + result.getRssi() + "\nAddress: " + result.getDevice().getAddress() +
                         "\nUUID: " + beacon.getUuid() + "\nMajor: " + beacon.getMajor() + "\nMinor: " + beacon.getMinor() + "\nTemperature : " + beacon.getTemper() +
-                        "\nLight : " + beacon.getLight() + "\nHumidity : " + beacon.getHum()+"\nBattery level :"+beacon.getBattery()+"\n\n");
+                        "\nLight : " + beacon.getLight() + "\nHumidity : " + beacon.getHum() + "\nBattery level :" + beacon.getBattery() + "\n\n");
                 final int scrollAmount = peripheralTextView.getLayout().getLineTop(peripheralTextView.getLineCount()) - peripheralTextView.getHeight();
                 if (scrollAmount > 0)
                     peripheralTextView.scrollTo(0, scrollAmount);
 
 
+            }
         }
     };
 
@@ -203,42 +203,42 @@ public class MainActivity extends AppCompatActivity {
                         hexString.substring(16, 20) + "-" +
                         hexString.substring(20, 32);
 
-                //Here is your Major value
-                major = (scanRecord[startByte + 20] & 0xff) * 0x100 + (scanRecord[startByte + 21] & 0xff);
 
-                //Here is your Minor value
+                major = (scanRecord[startByte + 20] & 0xff) * 0x100 + (scanRecord[startByte + 21] & 0xff);
                 minor = (scanRecord[startByte + 22] & 0xff) * 0x100 + (scanRecord[startByte + 23] & 0xff);
 
 
-                if((scanRecord.length > startByte) && (scanRecord[startByte + 25] & 0xff) == 0x06){
+                //if the type of beacon is NTB-100, it is enable to search.
+
+                if ((scanRecord[startByte + 33] & 0xff) == 0x20 && (scanRecord[startByte + 34] & 0xff) == 0x18 &&
+                (scanRecord[startByte + 46] & 0xff) == 0x21 && (scanRecord[startByte + 47] & 0xff) ==0x18)
+                {
                     startByte += 26;
 
-                    while(((scanRecord[startByte] & 0xff) != 0x20) && ((scanRecord[startByte + 1] & 0xff) != 0x18)){
+
+                    while (((scanRecord[startByte] & 0xff) != 0x20) && ((scanRecord[startByte + 1] & 0xff) != 0x18)) {
 
                         startByte++;
 
-                        if(startByte > 60){
-                            patternFound = false;
-                            break;
-                        }
+
                     }
 
-                    if(patternFound){
-                        light = (scanRecord[startByte + 2] & 0xff);
-                        temper = (scanRecord[startByte + 3] & 0xff);
-                        hum = (scanRecord[startByte + 4] & 0xff);
-                        batteryValue = (scanRecord[startByte+5] &0xff);
-                        Log.d("testt", scanRecord[startByte+2]+""+scanRecord[startByte+3]+""+scanRecord[startByte+4]+"");
-                    }
+
+                    light = (scanRecord[startByte + 2] & 0xff);
+                    temper = (scanRecord[startByte + 3] & 0xff);
+                    hum = (scanRecord[startByte + 4] & 0xff);
+                    batteryValue = (scanRecord[startByte + 5] & 0xff);
+
                 }
-            }
 
-                battery = (int)convertToBatteryLevel(batteryValue);
+
+
+                battery = (int) convertToBatteryLevel(batteryValue);
                 this.rssi = result.getRssi();
                 this.name = result.getDevice().getName();
                 this.address = result.getDevice().getAddress();
 
-
+            }
 
         }
         public String getUuid(){return uuid;}
@@ -248,6 +248,7 @@ public class MainActivity extends AppCompatActivity {
         public int getLight(){return light;}
         public int getHum(){return hum;}
         public float getBattery(){return battery;}
+        public String getAddress(){return address;}
 
 
 

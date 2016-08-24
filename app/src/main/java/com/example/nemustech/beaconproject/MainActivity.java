@@ -17,24 +17,26 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.method.ScrollingMovementMethod;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Collections;
 
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public class MainActivity extends AppCompatActivity {
-
+//
     BluetoothManager btManager;
     BluetoothAdapter btAdapter;
     BluetoothLeScanner btScanner;
     Button startScanningButton;
     Button stopScanningButton;
     TextView peripheralTextView;
-    private ArrayList<Integer> arr;
     private final static int REQUEST_ENABLE_BT = 1;
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
+    ArrayList<BeaconRecord> arr = new ArrayList<>();
 
     @TargetApi(Build.VERSION_CODES.M)
     @Override
@@ -94,16 +96,19 @@ public class MainActivity extends AppCompatActivity {
         public void onScanResult(int callbackType, final ScanResult result) {
 
             BeaconRecord beacon = new BeaconRecord(result);
+            arr.add(beacon);
+            Collections.sort(arr);
+            Log.d("resultlist",arr.get(0)+"");
             //if light of beacons is 0, it isn't display on device.
             if (beacon.light != 0 ) {
-                peripheralTextView.append("Device Name: " + result.getDevice().getName() + "\nrssi: " + result.getRssi() + "\nAddress: " + result.getDevice().getAddress() +
-                        "\nUUID: " + beacon.getUuid() + "\nMajor: " + beacon.getMajor() + "\nMinor: " + beacon.getMinor() + "\nTemperature : " + beacon.getTemper() +
-                        "\nLight : " + beacon.getLight() + "\nHumidity : " + beacon.getHum() + "\nBattery level :" + beacon.getBattery() + "\n\n");
-                final int scrollAmount = peripheralTextView.getLayout().getLineTop(peripheralTextView.getLineCount()) - peripheralTextView.getHeight();
-                if (scrollAmount > 0)
-                    peripheralTextView.scrollTo(0, scrollAmount);
-
-
+                if(arr.) {
+                    peripheralTextView.append("Device Name: " + result.getDevice().getName() + "\nrssi: " + result.getRssi() + "\nAddress: " + result.getDevice().getAddress() +
+                            "\nUUID: " + beacon.getUuid() + "\nMajor: " + beacon.getMajor() + "\nMinor: " + beacon.getMinor() + "\nTemperature : " + beacon.getTemper() +
+                            "\nLight : " + beacon.getLight() + "\nHumidity : " + beacon.getHum() + "\nBattery level :" + beacon.getBattery() + "\n\n");
+                    final int scrollAmount = peripheralTextView.getLayout().getLineTop(peripheralTextView.getLineCount()) - peripheralTextView.getHeight();
+                    if (scrollAmount > 0)
+                        peripheralTextView.scrollTo(0, scrollAmount);
+                }
             }
         }
     };
@@ -162,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-    static class BeaconRecord {
+    static class BeaconRecord implements Comparable<BeaconRecord>{
         private String uuid;
         private int minor;
         private int major;
@@ -277,6 +282,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
+        @Override
+        public int compareTo(BeaconRecord beaconRecord) {
+            if(this.rssi>beaconRecord.rssi){return this.rssi;}
+            else {return beaconRecord.rssi;}
+        }
     }
 
 
